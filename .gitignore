@@ -1,0 +1,5 @@
+/bin/
+/target/
+/auditoria/
+node_modules/
+dist/

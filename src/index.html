@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:;">
+  <title>Distribuidora · Controle de Estoque</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#dashboard"><span class="brand-mark">▣</span><span><strong>Distribuidora</strong><small>Estoque e vendas</small></span></a>
+      <p class="nav-caption">NAVEGAÇÃO</p>
+      <nav aria-label="Navegação principal">
+        <button class="nav-item active" data-page="dashboard"><span>▦</span>Dashboard</button>
+        <button class="nav-item" data-page="venda"><span>🛒</span>Nova Venda</button>
+        <button class="nav-item muted" type="button"><span>▣</span>Vendas</button>
+        <button class="nav-item muted" type="button"><span>⬡</span>Estoque</button>
+        <button class="nav-item muted" type="button"><span>↔</span>Movimentações</button>
+        <button class="nav-item muted" type="button"><span>▥</span>Relatórios</button>
+      </nav>
+      <div class="sidebar-footer"><span class="avatar">AD</span><span><strong>Administrador</strong><small>Distribuidora</small></span></div>
+    </aside>
+
+    <main class="main-area">
+      <div class="window-caption"><span class="caption-dot"></span>Distribuidora — Controle de Estoque</div>
+      <section id="dashboard-page" class="page dashboard-page">
+        <header class="page-heading"><div><h1>Dashboard</h1><p id="dashboard-date"></p></div><button class="button primary" data-go="venda"><span>＋</span> Nova venda</button></header>
+        <div class="dashboard-stats">
+          <article class="stat-card"><span class="stat-title">Vendas hoje</span><strong id="stat-today">R$ 0,00</strong><small class="stat-trend"><b>↗</b> <span id="stat-trend">+0%</span> em relação a ontem</small></article>
+          <article class="stat-card"><span class="stat-title">Pedidos</span><strong id="stat-orders">0</strong><small class="stat-trend"><b>↗</b> <span id="stat-orders-trend">+0</span> em relação a ontem</small></article>
+          <article class="stat-card"><span class="stat-title">Produtos cadastrados</span><strong id="stat-products">0</strong><small>Itens no catálogo</small></article>
+          <article class="stat-card"><span class="stat-title">Estoque baixo</span><strong id="stat-low">0</strong><small>Produtos precisam de reposição</small></article>
+        </div>
+        <div class="dashboard-columns">
+          <section class="panel chart-panel"><div class="panel-heading"><div><h2>Vendas nos últimos 7 dias</h2><p>Resumo diário do faturamento</p></div><span class="chart-period">Últimos 7 dias⌄</span></div><div class="chart" id="sales-chart" aria-label="Gráfico das vendas nos últimos sete dias"></div></section>
+          <section class="panel bestsellers-panel"><div class="panel-heading"><div><h2>Mais vendidos</h2><p>Produtos com mais saída</p></div></div><div id="best-sellers" class="rank-list"></div><button class="text-button" type="button">Ver relatório <span>→</span></button></section>
+        </div>
+        <section class="panel recent-sales"><div class="panel-heading"><div><h2>Vendas recentes</h2><p>Últimos pedidos registrados</p></div><button class="text-button" type="button">Ver todas <span>→</span></button></div><div class="table-wrap"><table><thead><tr><th>PEDIDO</th><th>HORÁRIO</th><th>ITENS</th><th>PAGAMENTO</th><th>VALOR</th></tr></thead><tbody id="recent-sales"></tbody></table></div></section>
+      </section>
+
+      <section id="venda-page" class="page sale-page hidden">
+        <header class="page-heading"><div><h1>Nova Venda</h1><p id="sale-order-label">Pedido novo · Balcão</p></div><span class="sale-date" id="sale-date"></span></header>
+        <div class="sale-workspace">
+          <section class="catalog-panel">
+            <div class="catalog-tools"><label class="search-box"><span>⌕</span><input id="product-search" type="search" placeholder="Buscar produto por nome ou código de barras (F2)" autocomplete="off"><kbd>F2</kbd></label></div>
+            <div class="category-tabs" id="category-tabs" aria-label="Filtrar produtos por categoria"></div>
+            <div class="product-grid" id="product-grid"></div>
+          </section>
+          <aside class="panel order-panel">
+            <div class="panel-heading order-heading"><div><h2>Pedido atual</h2><p id="order-number">#1049 · Balcão 01</p></div><button class="icon-button" id="clear-cart" type="button" aria-label="Limpar pedido" title="Limpar pedido">⌫</button></div>
+            <div class="order-items" id="order-items"></div>
+            <div class="empty-order" id="empty-order"><span>🛒</span><strong>Nenhum item no pedido</strong><small>Escolha uma bebida para começar.</small></div>
+            <div class="order-summary"><div class="payment-row"><label for="payment-method">Pagamento</label><select id="payment-method"><option>Dinheiro</option><option>Pix</option><option>Cartão de débito</option><option>Cartão de crédito</option></select></div><div class="discount-row"><label for="discount-input">Desconto (%)</label><input id="discount-input" type="number" min="0" max="100" value="0"></div><div class="totals"><div><span>Subtotal</span><strong id="subtotal-value">R$ 0,00</strong></div><div><span>Desconto</span><strong id="discount-value">− R$ 0,00</strong></div><div class="grand-total"><span>Total</span><strong id="total-value">R$ 0,00</strong></div></div><div class="form-message" id="sale-message" role="status" aria-live="polite"></div><button class="button primary finish-button" id="finish-sale" type="button" disabled>Finalizar venda <span>→</span></button><p class="secure-note">O estoque é atualizado ao concluir o pedido.</p></div>
+          </aside>
+        </div>
+      </section>
+      <footer class="app-footer"><span>Distribuidora · Controle de Estoque</span><span>Aplicação desktop</span></footer>
+    </main>
+  </div>
+  <script src="renderer.js"></script>
+</body>
+</html>

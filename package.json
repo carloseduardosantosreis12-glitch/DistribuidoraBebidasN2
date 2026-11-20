@@ -1,0 +1,8 @@
+{
+  "name": "distribuidora-bebidas-electron",
+  "version": "1.0.0",
+  "description": "Controle de estoque da distribuidora em Electron",
+  "main": "main.js",
+  "scripts": { "start": "electron ." },
+  "devDependencies": { "electron": "^35.0.0" }
+}
