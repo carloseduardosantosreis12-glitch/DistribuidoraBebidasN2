@@ -1,5 +1,5 @@
-// renderer.js controla apenas as telas Dashboard e Nova Venda.
-// Os dados de demonstração permitem visualizar a interface antes da integração com IPC/JSON.
+// renderer.js controla Dashboard, Nova Venda e Estoque.
+// Quando o preload existe, bebidas são carregadas e gravadas no JSON pelo processo principal.
 
 const bebidasDemo = [
   // Campos do modelo Bebida usado na N1: id, nome, marca, categoria, preco e estoque.
@@ -24,6 +24,7 @@ const rotuloCategoria = {
 let bebidas = [...bebidasDemo];
 let carrinho = [];
 let categoriaAtiva = "Todos";
+let categoriaEstoqueAtiva = "Todas";
 let vendasDemo = [
   { pedido: "#1048", horario: "Hoje, 14:32", itens: "3 itens", pagamento: "Pix", valor: 128.40, status: "Concluída" },
   { pedido: "#1047", horario: "Hoje, 13:58", itens: "5 itens", pagamento: "Dinheiro", valor: 247.00, status: "Concluída" },
@@ -129,13 +130,91 @@ function desenharPedido() {
   desenharCatalogo();
 }
 
-// A navegação por botões e pelo menu nativo abre uma das duas telas implementadas.
+// Cria um SKU visual a partir da categoria e do ID, sem alterar o formato salvo no JSON.
+function skuDaBebida(bebida) {
+  const prefixos = { Cervejas: "BEB", Refrigerantes: "REF", Águas: "AGU", Sucos: "SUC", Energéticos: "ENE", Vinhos: "VIN", Destilados: "DES", Outros: "OUT" };
+  const prefixo = prefixos[bebida.categoria] || "OUT";
+  return `${prefixo}-${String(bebida.id).padStart(3, "0")}`;
+}
+
+// Mostra a tabela de estoque, seus filtros e os indicadores de quantidade.
+function desenharEstoque() {
+  const busca = document.querySelector("#stock-search").value.trim().toLocaleLowerCase("pt-BR");
+  const seletorCategoria = document.querySelector("#stock-category");
+  const categorias = [...new Set(bebidas.map((bebida) => bebida.categoria).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  if (categoriaEstoqueAtiva !== "Todas" && !categorias.includes(categoriaEstoqueAtiva)) categoriaEstoqueAtiva = "Todas";
+  seletorCategoria.innerHTML = ['<option value="Todas">Todas as categorias</option>', ...categorias.map((categoria) => `<option value="${escapar(categoria)}">${escapar(categoria)}</option>`)].join("");
+  seletorCategoria.value = categoriaEstoqueAtiva;
+
+  const totalUnidades = bebidas.reduce((soma, bebida) => soma + (Number(bebida.estoque) || 0), 0);
+  document.querySelector("#stock-summary").textContent = `${bebidas.length} ${bebidas.length === 1 ? "produto cadastrado" : "produtos cadastrados"} · ${totalUnidades.toLocaleString("pt-BR")} ${totalUnidades === 1 ? "unidade" : "unidades"} em estoque`;
+
+  const produtos = bebidas.filter((bebida) => {
+    const sku = skuDaBebida(bebida);
+    const correspondeBusca = `${bebida.nome} ${sku} ${bebida.marca || ""}`.toLocaleLowerCase("pt-BR").includes(busca);
+    return correspondeBusca && (categoriaEstoqueAtiva === "Todas" || bebida.categoria === categoriaEstoqueAtiva);
+  }).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+
+  const tabela = document.querySelector("#stock-table-body");
+  const vazio = document.querySelector("#stock-empty");
+  if (!produtos.length) {
+    tabela.innerHTML = "";
+    vazio.classList.remove("hidden");
+    const nenhumCadastrado = bebidas.length === 0 && !busca && categoriaEstoqueAtiva === "Todas";
+    document.querySelector("#stock-empty-title").textContent = nenhumCadastrado ? "Nenhum produto cadastrado" : "Nenhum resultado encontrado";
+    document.querySelector("#stock-empty-description").textContent = nenhumCadastrado ? "Cadastre uma bebida para começar a controlar o estoque." : "Tente mudar a busca ou escolher outra categoria.";
+    return;
+  }
+  vazio.classList.add("hidden");
+  tabela.innerHTML = produtos.map((bebida) => {
+    const unidades = Number(bebida.estoque) || 0;
+    const classeStatus = unidades === 0 ? "out" : unidades <= 10 ? "low" : "";
+    const textoStatus = unidades === 0 ? "Sem estoque" : unidades <= 10 ? "Estoque baixo" : "Em estoque";
+    return `<tr>
+      <td>${skuDaBebida(bebida)}</td><td>${escapar(bebida.nome)}</td><td>${escapar(bebida.categoria || "Outros")}</td>
+      <td>${unidades.toLocaleString("pt-BR")} un.</td><td>${formatoMoeda(bebida.preco)}</td><td><span class="stock-status ${classeStatus}">${textoStatus}</span></td>
+      <td><div class="stock-actions"><button class="stock-action" type="button" data-edit-product="${bebida.id}">Editar</button><button class="stock-action delete" type="button" data-delete-product="${bebida.id}">Excluir</button></div></td>
+    </tr>`;
+  }).join("");
+}
+
+// Abre o mesmo formulário para cadastrar ou alterar uma bebida.
+function abrirFormularioProduto(bebida = null) {
+  const formulario = document.querySelector("#product-form");
+  formulario.reset();
+  document.querySelector("#product-id").value = bebida?.id ?? "";
+  document.querySelector("#product-name").value = bebida?.nome ?? "";
+  document.querySelector("#product-brand").value = bebida?.marca ?? "";
+  document.querySelector("#product-category").value = bebida?.categoria ?? "";
+  document.querySelector("#product-price").value = bebida?.preco ?? "";
+  document.querySelector("#product-stock").value = bebida?.estoque ?? "";
+  document.querySelector("#product-expiry").value = bebida?.validade ?? "";
+  document.querySelector("#product-dialog-title").textContent = bebida ? "Editar produto" : "Novo produto";
+  document.querySelector("#save-product-button").textContent = bebida ? "Salvar alterações" : "Salvar produto";
+  document.querySelector("#product-form-message").textContent = "";
+  document.querySelector("#product-dialog").showModal();
+  document.querySelector("#product-name").focus();
+}
+
+// Atualiza a lista real após inclusão, edição ou exclusão e redesenha as telas dependentes.
+async function recarregarBebidas() {
+  if (window.api?.listarBebidas) {
+    const resposta = conferirResposta(await window.api.listarBebidas());
+    bebidas = Array.isArray(resposta) ? resposta.map((bebida) => ({ ...bebida, categoria: bebida.categoria?.label || rotuloCategoria[bebida.categoria] || bebida.categoria || "Outros" })) : [];
+  }
+  desenharEstoque();
+  desenharCatalogo();
+  desenharPedido();
+  atualizarDashboard();
+}
+
+// A navegação mostra uma seção por vez dentro do mesmo index.html.
 function abrirTela(nome) {
-  document.querySelector("#dashboard-page").classList.toggle("hidden", nome !== "dashboard");
-  document.querySelector("#venda-page").classList.toggle("hidden", nome !== "venda");
+  document.querySelectorAll(".page").forEach((pagina) => pagina.classList.toggle("hidden", pagina.id !== `${nome}-page`));
   document.querySelectorAll(".nav-item[data-page]").forEach((botao) => botao.classList.toggle("active", botao.dataset.page === nome));
   document.querySelector("#sale-date").textContent = new Intl.DateTimeFormat("pt-BR", { dateStyle: "full" }).format(new Date());
   if (nome === "venda") document.querySelector("#product-search").focus();
+  if (nome === "estoque") desenharEstoque();
 }
 
 // Ctrl+F no menu nativo abre Nova Venda e coloca o cursor na busca de bebidas.
@@ -149,6 +228,85 @@ window.api?.aoSolicitarBusca?.(() => {
 // Registra os cliques da navegação e os botões de ação do Dashboard.
 document.querySelectorAll(".nav-item[data-page], [data-go]").forEach((botao) => {
   botao.addEventListener("click", () => abrirTela(botao.dataset.page || botao.dataset.go));
+});
+
+// Ctrl+N no menu nativo abre diretamente o cadastro de uma bebida.
+window.api?.aoSolicitarNovoCadastro?.(() => {
+  abrirTela("estoque");
+  abrirFormularioProduto();
+});
+
+// Busca e categoria da tela Estoque atualizam a tabela sem recarregar o aplicativo.
+document.querySelector("#stock-search").addEventListener("input", desenharEstoque);
+document.querySelector("#stock-category").addEventListener("change", (evento) => {
+  categoriaEstoqueAtiva = evento.target.value;
+  desenharEstoque();
+});
+document.querySelector("#new-product-button").addEventListener("click", () => abrirFormularioProduto());
+document.querySelector("#close-product-dialog").addEventListener("click", () => document.querySelector("#product-dialog").close());
+document.querySelector("#cancel-product-dialog").addEventListener("click", () => document.querySelector("#product-dialog").close());
+
+// Salva no repositório JSON através do preload; fora do Electron, mantém a lista em memória.
+document.querySelector("#product-form").addEventListener("submit", async (evento) => {
+  evento.preventDefault();
+  const mensagem = document.querySelector("#product-form-message");
+  const dados = {
+    id: document.querySelector("#product-id").value || undefined,
+    nome: document.querySelector("#product-name").value.trim(),
+    marca: document.querySelector("#product-brand").value.trim(),
+    categoria: document.querySelector("#product-category").value,
+    preco: Number(document.querySelector("#product-price").value),
+    estoque: Number(document.querySelector("#product-stock").value),
+    validade: document.querySelector("#product-expiry").value || null
+  };
+  if (!dados.nome || !dados.categoria || !Number.isFinite(dados.preco) || dados.preco <= 0 || !Number.isInteger(dados.estoque) || dados.estoque < 0) {
+    mensagem.textContent = "Confira os campos: nome, categoria, preço positivo e quantidade inteira.";
+    return;
+  }
+  const botao = document.querySelector("#save-product-button");
+  botao.disabled = true;
+  mensagem.textContent = "";
+  try {
+    if (window.api?.salvarBebida) {
+      conferirResposta(await window.api.salvarBebida(dados));
+    } else {
+      const id = dados.id ? Number(dados.id) : Math.max(0, ...bebidas.map((bebida) => Number(bebida.id) || 0)) + 1;
+      const bebida = { ...dados, id };
+      const indice = bebidas.findIndex((item) => item.id === id);
+      if (indice >= 0) bebidas[indice] = bebida;
+      else bebidas.push(bebida);
+    }
+    document.querySelector("#product-dialog").close();
+    await recarregarBebidas();
+  } catch (erro) {
+    mensagem.textContent = erro.message || "Não foi possível salvar o produto.";
+  } finally {
+    botao.disabled = false;
+  }
+});
+
+// Editar reutiliza o formulário; excluir usa a confirmação nativa configurada no main.js.
+document.querySelector("#stock-table-body").addEventListener("click", async (evento) => {
+  const botaoEditar = evento.target.closest("[data-edit-product]");
+  const botaoExcluir = evento.target.closest("[data-delete-product]");
+  if (botaoEditar) {
+    abrirFormularioProduto(porId(botaoEditar.dataset.editProduct));
+    return;
+  }
+  if (!botaoExcluir) return;
+  const id = Number(botaoExcluir.dataset.deleteProduct);
+  try {
+    if (window.api?.excluirBebida) {
+      const excluiu = conferirResposta(await window.api.excluirBebida(id));
+      if (!excluiu) return;
+    } else {
+      if (!window.confirm("Deseja realmente excluir esta bebida?")) return;
+      bebidas = bebidas.filter((bebida) => bebida.id !== id);
+    }
+    await recarregarBebidas();
+  } catch (erro) {
+    window.alert(erro.message || "Não foi possível excluir o produto.");
+  }
 });
 
 // Adicionar um produto ao pedido ocorre ao clicar em qualquer parte do seu cartão.
@@ -255,11 +413,13 @@ async function iniciar() {
     atualizarDashboard(resumo);
     desenharCatalogo();
     desenharPedido();
+    desenharEstoque();
   } catch (erro) {
     console.error("Não foi possível carregar os dados do Dashboard:", erro);
     atualizarDashboard();
     desenharCatalogo();
     desenharPedido();
+    desenharEstoque();
   }
 }
 
