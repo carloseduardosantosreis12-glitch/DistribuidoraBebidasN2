@@ -15,10 +15,10 @@
       <nav aria-label="Navegação principal">
         <button class="nav-item active" data-page="dashboard"><span>▦</span>Dashboard</button>
         <button class="nav-item" data-page="venda"><span>🛒</span>Nova Venda</button>
-        <button class="nav-item muted" type="button"><span>▣</span>Vendas</button>
+        <button class="nav-item" data-page="vendas" type="button"><span>▣</span>Vendas</button>
         <button class="nav-item" data-page="estoque" type="button"><span>⬡</span>Estoque</button>
         <button class="nav-item muted" type="button"><span>↔</span>Movimentações</button>
-        <button class="nav-item muted" type="button"><span>▥</span>Relatórios</button>
+        <button class="nav-item" data-page="relatorios" type="button"><span>▥</span>Relatórios</button>
       </nav>
       <div class="sidebar-footer"><span class="avatar">AD</span><span><strong>Administrador</strong><small>Distribuidora</small></span></div>
     </aside>
@@ -35,9 +35,9 @@
         </div>
         <div class="dashboard-columns">
           <section class="panel chart-panel"><div class="panel-heading"><div><h2>Vendas nos últimos 7 dias</h2><p>Resumo diário do faturamento</p></div><span class="chart-period">Últimos 7 dias⌄</span></div><div class="chart" id="sales-chart" aria-label="Gráfico das vendas nos últimos sete dias"></div></section>
-          <section class="panel bestsellers-panel"><div class="panel-heading"><div><h2>Mais vendidos</h2><p>Produtos com mais saída</p></div></div><div id="best-sellers" class="rank-list"></div><button class="text-button" type="button">Ver relatório <span>→</span></button></section>
+          <section class="panel bestsellers-panel"><div class="panel-heading"><div><h2>Mais vendidos</h2><p>Produtos com mais saída</p></div></div><div id="best-sellers" class="rank-list"></div><button class="text-button" type="button" data-go="relatorios">Ver relatório <span>→</span></button></section>
         </div>
-        <section class="panel recent-sales"><div class="panel-heading"><div><h2>Vendas recentes</h2><p>Últimos pedidos registrados</p></div><button class="text-button" type="button">Ver todas <span>→</span></button></div><div class="table-wrap"><table><thead><tr><th>PEDIDO</th><th>HORÁRIO</th><th>ITENS</th><th>PAGAMENTO</th><th>VALOR</th></tr></thead><tbody id="recent-sales"></tbody></table></div></section>
+        <section class="panel recent-sales"><div class="panel-heading"><div><h2>Vendas recentes</h2><p>Últimos pedidos registrados</p></div><button class="text-button" type="button" data-go="vendas">Ver todas <span>→</span></button></div><div class="table-wrap"><table><thead><tr><th>PEDIDO</th><th>HORÁRIO</th><th>ITENS</th><th>PAGAMENTO</th><th>VALOR</th></tr></thead><tbody id="recent-sales"></tbody></table></div></section>
       </section>
 
       <section id="venda-page" class="page sale-page hidden">
@@ -73,6 +73,57 @@
               <tbody id="stock-table-body"></tbody>
             </table>
             <div class="stock-empty hidden" id="stock-empty" role="status"><strong id="stock-empty-title">Nenhum produto cadastrado</strong><span id="stock-empty-description">Cadastre uma bebida para começar a controlar o estoque.</span></div>
+          </div>
+        </section>
+      </section>
+
+      <section id="vendas-page" class="page sales-history-page hidden">
+        <header class="page-heading">
+          <div><h1>Vendas</h1><p id="sales-summary">0 vendas registradas</p></div>
+          <button class="button primary" data-go="venda"><span>＋</span> Nova venda</button>
+        </header>
+        <div class="dashboard-stats stats-3">
+          <article class="stat-card"><span class="stat-title">Vendas registradas</span><strong id="sales-count">0</strong><small>Pedidos concluídos</small></article>
+          <article class="stat-card"><span class="stat-title">Faturamento</span><strong id="sales-revenue">R$ 0,00</strong><small>Soma das vendas listadas</small></article>
+          <article class="stat-card"><span class="stat-title">Ticket médio</span><strong id="sales-average">R$ 0,00</strong><small>Valor médio por pedido</small></article>
+        </div>
+        <section class="panel stock-panel" aria-label="Histórico de vendas">
+          <div class="stock-toolbar">
+            <label class="stock-search"><span aria-hidden="true">⌕</span><input id="sales-search" type="search" placeholder="Buscar por número do pedido" autocomplete="off" aria-label="Buscar venda por pedido"></label>
+            <label class="stock-category"><span class="sr-only">Filtrar por pagamento</span><select id="sales-payment"><option value="Todos">Todas as formas de pagamento</option></select></label>
+          </div>
+          <div class="table-wrap stock-table-wrap">
+            <table class="stock-table">
+              <thead><tr><th>PEDIDO</th><th>HORÁRIO</th><th>ITENS</th><th>PAGAMENTO</th><th>VALOR</th><th>STATUS</th></tr></thead>
+              <tbody id="sales-table-body"></tbody>
+            </table>
+            <div class="stock-empty hidden" id="sales-empty" role="status"><strong id="sales-empty-title">Nenhuma venda registrada</strong><span id="sales-empty-description">As vendas concluídas em Nova Venda aparecem aqui.</span></div>
+          </div>
+        </section>
+      </section>
+
+      <section id="relatorios-page" class="page reports-page hidden">
+        <header class="page-heading">
+          <div><h1>Relatórios</h1><p>Resumo das vendas e do estoque</p></div>
+        </header>
+        <div class="dashboard-stats">
+          <article class="stat-card"><span class="stat-title">Faturamento</span><strong id="report-revenue">R$ 0,00</strong><small>Vendas registradas</small></article>
+          <article class="stat-card"><span class="stat-title">Pedidos</span><strong id="report-orders">0</strong><small>Vendas concluídas</small></article>
+          <article class="stat-card"><span class="stat-title">Ticket médio</span><strong id="report-average">R$ 0,00</strong><small>Valor médio por pedido</small></article>
+          <article class="stat-card"><span class="stat-title">Valor em estoque</span><strong id="report-stock-value">R$ 0,00</strong><small id="report-stock-units">0 unidades</small></article>
+        </div>
+        <div class="reports-columns">
+          <section class="panel"><div class="panel-heading"><div><h2>Vendas por forma de pagamento</h2><p>Faturamento por tipo de pagamento</p></div></div><div class="bar-list" id="report-payments"></div></section>
+          <section class="panel"><div class="panel-heading"><div><h2>Estoque por categoria</h2><p>Unidades disponíveis</p></div></div><div class="bar-list" id="report-categories"></div></section>
+        </div>
+        <section class="panel stock-panel" aria-label="Produtos mais vendidos">
+          <div class="panel-heading reports-table-heading"><div><h2>Produtos mais vendidos</h2><p>Ranking por quantidade vendida</p></div></div>
+          <div class="table-wrap stock-table-wrap">
+            <table class="stock-table reports-table">
+              <thead><tr><th>#</th><th>PRODUTO</th><th>CATEGORIA</th><th>VENDIDOS</th><th>RECEITA</th><th>ESTOQUE ATUAL</th></tr></thead>
+              <tbody id="report-products"></tbody>
+            </table>
+            <div class="stock-empty hidden" id="report-products-empty" role="status"><strong>Nenhuma venda por produto ainda</strong><span>Conclua vendas em Nova Venda para ver o ranking.</span></div>
           </div>
         </section>
       </section>
