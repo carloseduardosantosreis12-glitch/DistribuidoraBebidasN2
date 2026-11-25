@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self';">
   <title>Distribuidora · Controle de Estoque</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -13,14 +13,23 @@
       <a class="brand" href="#dashboard"><span class="brand-mark">▣</span><span><strong>Distribuidora</strong><small>Estoque e vendas</small></span></a>
       <p class="nav-caption">NAVEGAÇÃO</p>
       <nav aria-label="Navegação principal">
-        <button class="nav-item active" data-page="dashboard"><span>▦</span>Dashboard</button>
-        <button class="nav-item" data-page="venda"><span>🛒</span>Nova Venda</button>
-        <button class="nav-item" data-page="vendas" type="button"><span>▣</span>Vendas</button>
-        <button class="nav-item" data-page="estoque" type="button"><span>⬡</span>Estoque</button>
-        <button class="nav-item muted" type="button"><span>↔</span>Movimentações</button>
-        <button class="nav-item" data-page="relatorios" type="button"><span>▥</span>Relatórios</button>
+        <button class="nav-item active" data-page="dashboard">
+          <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>Dashboard
+        </button>
+        <button class="nav-item" data-page="venda">
+          <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span>Nova Venda
+        </button>
+        <button class="nav-item" data-page="vendas" type="button">
+          <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>Vendas
+        </button>
+        <button class="nav-item" data-page="estoque" type="button">
+          <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span>Estoque
+        </button>
+        <button class="nav-item" data-page="relatorios" type="button">
+          <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>Relatórios
+        </button>
       </nav>
-      <div class="sidebar-footer"><span class="avatar">AD</span><span><strong>Administrador</strong><small>Distribuidora</small></span></div>
+      <div class="sidebar-footer"><span><strong>Controle de Estoque</strong><small>v1.0.0</small></span></div>
     </aside>
 
     <main class="main-area">
@@ -28,8 +37,8 @@
       <section id="dashboard-page" class="page dashboard-page">
         <header class="page-heading"><div><h1>Dashboard</h1><p id="dashboard-date"></p></div><button class="button primary" data-go="venda"><span>＋</span> Nova venda</button></header>
         <div class="dashboard-stats">
-          <article class="stat-card"><span class="stat-title">Vendas hoje</span><strong id="stat-today">R$ 0,00</strong><small class="stat-trend"><b>↗</b> <span id="stat-trend">+0%</span> em relação a ontem</small></article>
-          <article class="stat-card"><span class="stat-title">Pedidos</span><strong id="stat-orders">0</strong><small class="stat-trend"><b>↗</b> <span id="stat-orders-trend">+0</span> em relação a ontem</small></article>
+          <article class="stat-card"><span class="stat-title">Vendas hoje</span><strong id="stat-today">R$ 0,00</strong><small class="stat-trend"><b>↗</b> <span id="stat-trend">—</span> em relação a ontem</small></article>
+          <article class="stat-card"><span class="stat-title">Pedidos</span><strong id="stat-orders">0</strong><small class="stat-trend"><b>↗</b> <span id="stat-orders-trend">—</span> em relação a ontem</small></article>
           <article class="stat-card"><span class="stat-title">Produtos cadastrados</span><strong id="stat-products">0</strong><small>Itens no catálogo</small></article>
           <article class="stat-card"><span class="stat-title">Estoque baixo</span><strong id="stat-low">0</strong><small>Produtos precisam de reposição</small></article>
         </div>
@@ -51,7 +60,10 @@
           <aside class="panel order-panel">
             <div class="panel-heading order-heading"><div><h2>Pedido atual</h2><p id="order-number">#1049 · Balcão 01</p></div><button class="icon-button" id="clear-cart" type="button" aria-label="Limpar pedido" title="Limpar pedido">⌫</button></div>
             <div class="order-items" id="order-items"></div>
-            <div class="empty-order" id="empty-order"><span>🛒</span><strong>Nenhum item no pedido</strong><small>Escolha uma bebida para começar.</small></div>
+            <div class="empty-order" id="empty-order">
+              <span><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span>
+              <strong>Nenhum item no pedido</strong><small>Escolha uma bebida para começar.</small>
+            </div>
             <div class="order-summary"><div class="payment-row"><label for="payment-method">Pagamento</label><select id="payment-method"><option>Dinheiro</option><option>Pix</option><option>Cartão de débito</option><option>Cartão de crédito</option></select></div><div class="discount-row"><label for="discount-input">Desconto (%)</label><input id="discount-input" type="number" min="0" max="100" value="0"></div><div class="totals"><div><span>Subtotal</span><strong id="subtotal-value">R$ 0,00</strong></div><div><span>Desconto</span><strong id="discount-value">− R$ 0,00</strong></div><div class="grand-total"><span>Total</span><strong id="total-value">R$ 0,00</strong></div></div><div class="form-message" id="sale-message" role="status" aria-live="polite"></div><button class="button primary finish-button" id="finish-sale" type="button" disabled>Finalizar venda <span>→</span></button><p class="secure-note">O estoque é atualizado ao concluir o pedido.</p></div>
           </aside>
         </div>

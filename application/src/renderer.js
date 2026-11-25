@@ -1,35 +1,18 @@
 // renderer.js controla Dashboard, Nova Venda e Estoque.
 // Quando o preload existe, bebidas são carregadas e gravadas no JSON pelo processo principal.
 
-const bebidasDemo = [
-  // Campos do modelo Bebida usado na N1: id, nome, marca, categoria, preco e estoque.
-  { id: 1, nome: "Cerveja Pilsen Lata 350ml", marca: "Ambev", categoria: "Cervejas", preco: 38.90, estoque: 24 },
-  { id: 2, nome: "Cerveja Long Neck 330ml", marca: "Heineken", categoria: "Cervejas", preco: 94.00, estoque: 36 },
-  { id: 3, nome: "Refrigerante Cola 2L", marca: "Coca-Cola", categoria: "Refrigerantes", preco: 42.50, estoque: 148 },
-  { id: 4, nome: "Refrigerante Guaraná 2L", marca: "Antarctica", categoria: "Refrigerantes", preco: 39.90, estoque: 11 },
-  { id: 5, nome: "Água Mineral sem gás 500ml", marca: "Indaiá", categoria: "Águas", preco: 18.00, estoque: 9 },
-  { id: 6, nome: "Água Mineral 1,5L", marca: "Indaiá", categoria: "Águas", preco: 16.50, estoque: 42 },
-  { id: 7, nome: "Suco de Uva Integral 1L", marca: "Aurora", categoria: "Sucos", preco: 48.00, estoque: 21 },
-  { id: 8, nome: "Energético 473ml", marca: "Red Bull", categoria: "Energéticos", preco: 39.00, estoque: 5 }
-];
-
-// Totais de demonstração do Dashboard, separados do modelo da bebida da N1.
-const quantidadeVendidaDemo = { 1: 82, 2: 68, 3: 61, 4: 54, 5: 47, 6: 31, 7: 28, 8: 22 };
 const rotuloCategoria = {
   REFRIGERANTE: "Refrigerantes", AGUA: "Águas", SUCO: "Sucos", CERVEJA: "Cervejas",
   ENERGETICO: "Energéticos", VINHO: "Vinhos", DESTILADO: "Destilados", OUTRO: "Outros"
 };
 
-// Carrinho e filtro são estados temporários desta tela.
-let bebidas = [...bebidasDemo];
+// Estado em memória; bebidas são carregadas do JSON na inicialização.
+let bebidas = [];
 let carrinho = [];
 let categoriaAtiva = "Todos";
 let categoriaEstoqueAtiva = "Todas";
-let vendasDemo = [
-  { pedido: "#1048", horario: "Hoje, 14:32", itens: "3 itens", pagamento: "Pix", valor: 128.40, status: "Concluída" },
-  { pedido: "#1047", horario: "Hoje, 13:58", itens: "5 itens", pagamento: "Dinheiro", valor: 247.00, status: "Concluída" },
-  { pedido: "#1046", horario: "Hoje, 12:41", itens: "2 itens", pagamento: "Cartão de débito", valor: 81.50, status: "Concluída" }
-];
+// Vendas em memória até commit 2 (IPC + vendas.json).
+let vendas = [];
 
 const porId = (id) => bebidas.find((bebida) => bebida.id === Number(id));
 const formatoMoeda = (valor) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(valor) || 0);
@@ -46,34 +29,61 @@ function conferirResposta(resposta) {
   return resposta;
 }
 
-// Monta o gráfico de colunas do Dashboard a partir das vendas recentes disponíveis.
-function desenharGrafico(dados = [6200, 5400, 9300, 7100, 6800, 8420, 0]) {
+// Monta o gráfico de colunas usando createElement + CSSOM (style inline bloqueado pela CSP).
+function desenharGrafico(dados) {
+  const valores = Array.isArray(dados) && dados.length === 7 ? dados : [0, 0, 0, 0, 0, 0, 0];
   const dias = ["Qui", "Sex", "Sáb", "Dom", "Seg", "Ter", "Hoje"];
-  const maior = Math.max(...dados, 1);
-  document.querySelector("#sales-chart").innerHTML = dados.map((valor, indice) => {
+  const maior = Math.max(...valores, 1);
+  const container = document.querySelector("#sales-chart");
+  container.innerHTML = "";
+  valores.forEach((valor, indice) => {
     const altura = valor === 0 ? 4 : Math.max(8, Math.round((valor / maior) * 120));
     const valorTexto = valor ? `R$ ${(valor / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil` : "";
-    return `<div class="chart-column ${indice === dados.length - 1 ? "today" : ""}"><span class="chart-value">${valorTexto}</span><div class="chart-bar" style="height:${altura}px"></div><span class="chart-day">${dias[indice]}</span></div>`;
-  }).join("");
+
+    const col = document.createElement("div");
+    col.className = `chart-column${indice === valores.length - 1 ? " today" : ""}`;
+
+    const valEl = document.createElement("span");
+    valEl.className = "chart-value";
+    valEl.textContent = valorTexto;
+
+    const bar = document.createElement("div");
+    bar.className = "chart-bar";
+    bar.style.height = `${altura}px`;
+
+    const dayEl = document.createElement("span");
+    dayEl.className = "chart-day";
+    dayEl.textContent = dias[indice];
+
+    col.appendChild(valEl);
+    col.appendChild(bar);
+    col.appendChild(dayEl);
+    container.appendChild(col);
+  });
 }
 
 // Preenche os indicadores, produtos mais vendidos e tabela de pedidos recentes.
 function atualizarDashboard(resumo) {
-  const pedidosHoje = vendasDemo.length;
-  const valorHoje = vendasDemo.reduce((total, venda) => total + venda.valor, 0);
+  const pedidosHoje = vendas.length;
+  const valorHoje = vendas.reduce((total, venda) => total + (Number(venda.valor) || 0), 0);
   document.querySelector("#stat-today").textContent = formatoMoeda(resumo?.vendasHoje ?? valorHoje);
   document.querySelector("#stat-orders").textContent = resumo?.pedidosHoje ?? pedidosHoje;
   document.querySelector("#stat-products").textContent = resumo?.totalProdutos ?? bebidas.length;
   document.querySelector("#stat-low").textContent = resumo?.estoqueBaixo ?? bebidas.filter((bebida) => bebida.estoque <= 10).length;
-  document.querySelector("#stat-trend").textContent = resumo?.variacaoVendas ?? "+12,4%";
-  document.querySelector("#stat-orders-trend").textContent = resumo?.variacaoPedidos ?? "+6";
+  document.querySelector("#stat-trend").textContent = resumo?.variacaoVendas ?? "—";
+  document.querySelector("#stat-orders-trend").textContent = resumo?.variacaoPedidos ?? "—";
 
-  const maisVendidos = [...bebidas].sort((a, b) => (quantidadeVendidaDemo[b.id] || 0) - (quantidadeVendidaDemo[a.id] || 0)).slice(0, 4);
+  // Ranking calculado a partir das vendas reais (campo linhas de cada venda).
+  const vendidos = {};
+  vendas.forEach((venda) => (venda.linhas || []).forEach((linha) => {
+    vendidos[linha.bebidaId] = (vendidos[linha.bebidaId] || 0) + (Number(linha.quantidade) || 0);
+  }));
+  const maisVendidos = [...bebidas].sort((a, b) => (vendidos[b.id] || 0) - (vendidos[a.id] || 0)).slice(0, 4);
   document.querySelector("#best-sellers").innerHTML = maisVendidos.map((bebida, indice) => `
-    <div class="rank-row"><span class="rank-number">${indice + 1}</span><span class="rank-name">${escapar(bebida.nome)}</span><span class="rank-qty">${quantidadeVendidaDemo[bebida.id] || 0} un.</span></div>
+    <div class="rank-row"><span class="rank-number">${indice + 1}</span><span class="rank-name">${escapar(bebida.nome)}</span><span class="rank-qty">${(vendidos[bebida.id] || 0).toLocaleString("pt-BR")} un.</span></div>
   `).join("");
 
-  document.querySelector("#recent-sales").innerHTML = vendasDemo.map((venda) => `
+  document.querySelector("#recent-sales").innerHTML = vendas.slice(0, 5).map((venda) => `
     <tr><td>${escapar(venda.pedido)}</td><td>${escapar(venda.horario)}</td><td>${escapar(venda.itens)}</td><td>${escapar(venda.pagamento)}</td><td>${formatoMoeda(venda.valor)}</td></tr>
   `).join("");
   desenharGrafico(resumo?.vendasPorDia);
@@ -89,7 +99,6 @@ function desenharCatalogo() {
 
   const produtos = bebidas.filter((bebida) => {
     const correspondeCategoria = categoriaAtiva === "Todos" || bebida.categoria === categoriaAtiva;
-    // O código mostrado na N1 é gerado pelo ID; não é um campo extra da entidade.
     const codigo = String(bebida.id).padStart(3, "0");
     const correspondeBusca = `${bebida.nome} ${bebida.marca || ""} ${codigo}`.toLocaleLowerCase("pt-BR").includes(busca);
     return correspondeCategoria && correspondeBusca;
@@ -214,30 +223,30 @@ let pagamentoVendasAtivo = "Todos";
 function desenharVendas() {
   const busca = document.querySelector("#sales-search").value.trim().toLocaleLowerCase("pt-BR");
   const seletor = document.querySelector("#sales-payment");
-  const formas = [...new Set(vendasDemo.map((venda) => venda.pagamento).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const formas = [...new Set(vendas.map((venda) => venda.pagamento).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR"));
   if (pagamentoVendasAtivo !== "Todos" && !formas.includes(pagamentoVendasAtivo)) pagamentoVendasAtivo = "Todos";
   seletor.innerHTML = ['<option value="Todos">Todas as formas de pagamento</option>', ...formas.map((forma) => `<option value="${escapar(forma)}">${escapar(forma)}</option>`)].join("");
   seletor.value = pagamentoVendasAtivo;
 
-  const vendas = vendasDemo.filter((venda) => String(venda.pedido).toLocaleLowerCase("pt-BR").includes(busca) && (pagamentoVendasAtivo === "Todos" || venda.pagamento === pagamentoVendasAtivo));
-  const faturamento = vendas.reduce((soma, venda) => soma + (Number(venda.valor) || 0), 0);
-  document.querySelector("#sales-count").textContent = vendas.length;
+  const vendasFiltradas = vendas.filter((venda) => String(venda.pedido).toLocaleLowerCase("pt-BR").includes(busca) && (pagamentoVendasAtivo === "Todos" || venda.pagamento === pagamentoVendasAtivo));
+  const faturamento = vendasFiltradas.reduce((soma, venda) => soma + (Number(venda.valor) || 0), 0);
+  document.querySelector("#sales-count").textContent = vendasFiltradas.length;
   document.querySelector("#sales-revenue").textContent = formatoMoeda(faturamento);
-  document.querySelector("#sales-average").textContent = formatoMoeda(vendas.length ? faturamento / vendas.length : 0);
-  document.querySelector("#sales-summary").textContent = `${vendas.length} ${vendas.length === 1 ? "venda registrada" : "vendas registradas"}`;
+  document.querySelector("#sales-average").textContent = formatoMoeda(vendasFiltradas.length ? faturamento / vendasFiltradas.length : 0);
+  document.querySelector("#sales-summary").textContent = `${vendasFiltradas.length} ${vendasFiltradas.length === 1 ? "venda registrada" : "vendas registradas"}`;
 
   const vazio = document.querySelector("#sales-empty");
   const tabela = document.querySelector("#sales-table-body");
-  if (!vendas.length) {
+  if (!vendasFiltradas.length) {
     tabela.innerHTML = "";
     vazio.classList.remove("hidden");
-    const nenhumaVenda = vendasDemo.length === 0;
+    const nenhumaVenda = vendas.length === 0;
     document.querySelector("#sales-empty-title").textContent = nenhumaVenda ? "Nenhuma venda registrada" : "Nenhum resultado encontrado";
     document.querySelector("#sales-empty-description").textContent = nenhumaVenda ? "As vendas concluídas em Nova Venda aparecem aqui." : "Tente mudar a busca ou escolher outra forma de pagamento.";
     return;
   }
   vazio.classList.add("hidden");
-  tabela.innerHTML = vendas.map((venda) => `<tr>
+  tabela.innerHTML = vendasFiltradas.map((venda) => `<tr>
     <td>${escapar(venda.pedido)}</td><td>${escapar(venda.horario)}</td><td>${escapar(venda.itens)}</td><td>${escapar(venda.pagamento)}</td>
     <td>${formatoMoeda(venda.valor)}</td><td><span class="status-pill">${escapar(venda.status || "Concluída")}</span></td>
   </tr>`).join("");
@@ -254,26 +263,25 @@ function desenharBarras(destino, itens, formatar) {
 
 // Tela Relatórios: totais de vendas, valor do estoque e rankings calculados com os dados em memória.
 function desenharRelatorios() {
-  const faturamento = vendasDemo.reduce((soma, venda) => soma + (Number(venda.valor) || 0), 0);
+  const faturamento = vendas.reduce((soma, venda) => soma + (Number(venda.valor) || 0), 0);
   const unidades = bebidas.reduce((soma, bebida) => soma + (Number(bebida.estoque) || 0), 0);
   const valorEstoque = bebidas.reduce((soma, bebida) => soma + (Number(bebida.preco) || 0) * (Number(bebida.estoque) || 0), 0);
   document.querySelector("#report-revenue").textContent = formatoMoeda(faturamento);
-  document.querySelector("#report-orders").textContent = vendasDemo.length;
-  document.querySelector("#report-average").textContent = formatoMoeda(vendasDemo.length ? faturamento / vendasDemo.length : 0);
+  document.querySelector("#report-orders").textContent = vendas.length;
+  document.querySelector("#report-average").textContent = formatoMoeda(vendas.length ? faturamento / vendas.length : 0);
   document.querySelector("#report-stock-value").textContent = formatoMoeda(valorEstoque);
   document.querySelector("#report-stock-units").textContent = `${unidades.toLocaleString("pt-BR")} ${unidades === 1 ? "unidade" : "unidades"} em estoque`;
 
   const porPagamento = {};
-  vendasDemo.forEach((venda) => { porPagamento[venda.pagamento || "Outros"] = (porPagamento[venda.pagamento || "Outros"] || 0) + (Number(venda.valor) || 0); });
+  vendas.forEach((venda) => { porPagamento[venda.pagamento || "Outros"] = (porPagamento[venda.pagamento || "Outros"] || 0) + (Number(venda.valor) || 0); });
   desenharBarras(document.querySelector("#report-payments"), Object.entries(porPagamento).map(([nome, valor]) => ({ nome, valor })).sort((a, b) => b.valor - a.valor), formatoMoeda);
 
   const porCategoria = {};
   bebidas.forEach((bebida) => { porCategoria[bebida.categoria || "Outros"] = (porCategoria[bebida.categoria || "Outros"] || 0) + (Number(bebida.estoque) || 0); });
   desenharBarras(document.querySelector("#report-categories"), Object.entries(porCategoria).map(([nome, valor]) => ({ nome, valor })).sort((a, b) => b.valor - a.valor), (valor) => `${valor.toLocaleString("pt-BR")} un.`);
 
-  // O ranking usa só os itens das vendas feitas em Nova Venda (campo linhas), não os totais fictícios do Dashboard.
   const vendidos = {};
-  vendasDemo.forEach((venda) => (venda.linhas || []).forEach((linha) => { vendidos[linha.bebidaId] = (vendidos[linha.bebidaId] || 0) + (Number(linha.quantidade) || 0); }));
+  vendas.forEach((venda) => (venda.linhas || []).forEach((linha) => { vendidos[linha.bebidaId] = (vendidos[linha.bebidaId] || 0) + (Number(linha.quantidade) || 0); }));
   const ranking = bebidas.map((bebida) => ({ bebida, quantidade: vendidos[bebida.id] || 0 })).filter((linha) => linha.quantidade > 0).sort((a, b) => b.quantidade - a.quantidade).slice(0, 8);
   document.querySelector("#report-products-empty").classList.toggle("hidden", ranking.length > 0);
   document.querySelector("#report-products").innerHTML = ranking.map(({ bebida, quantidade }, indice) => `<tr>
@@ -306,8 +314,8 @@ document.querySelectorAll(".nav-item[data-page], [data-go]").forEach((botao) => 
   botao.addEventListener("click", () => abrirTela(botao.dataset.page || botao.dataset.go));
 });
 
-// Ctrl+N no menu nativo abre diretamente o cadastro de uma bebida.
-window.api?.aoSolicitarNovoCadastro?.(() => {
+// Ctrl+N no menu nativo abre diretamente o formulário de novo produto na tela Estoque.
+window.api?.aoNovoProduto?.(() => {
   abrirTela("estoque");
   abrirFormularioProduto();
 });
@@ -437,7 +445,7 @@ document.querySelector("#order-items").addEventListener("click", (evento) => {
 document.querySelector("#discount-input").addEventListener("input", desenharPedido);
 document.querySelector("#clear-cart").addEventListener("click", () => { carrinho = []; desenharPedido(); });
 
-// Atalho F2 leva o cursor direto para a pesquisa de produto, como indicado no Figma.
+// Atalho F2 leva o cursor direto para a pesquisa de produto.
 document.addEventListener("keydown", (evento) => {
   if (evento.key === "F2") {
     evento.preventDefault();
@@ -446,10 +454,9 @@ document.addEventListener("keydown", (evento) => {
   }
 });
 
-// Finaliza a venda pela API segura do preload; sem integração, mostra apenas uma confirmação local.
+// Finaliza a venda pelo IPC (commit 2); enquanto não existir, registra em memória.
 document.querySelector("#finish-sale").addEventListener("click", async () => {
   const dados = {
-    // Campos de cada ItemVenda usados na N1, sem enviar funções ou objetos da interface.
     itens: carrinho.map(({ id, nome, preco, quantidade }) => ({ bebidaId: id, nomeBebida: nome, quantidade, precoUnitario: preco })),
     formaPagamento: document.querySelector("#payment-method").value,
     descontoPercentual: Number(document.querySelector("#discount-input").value) || 0
@@ -457,14 +464,14 @@ document.querySelector("#finish-sale").addEventListener("click", async () => {
   const botao = document.querySelector("#finish-sale");
   botao.disabled = true;
   try {
-    // Contrato previsto: o preload expõe window.api.registrarVenda(dados) usando IPC.
-    if (window.api?.registrarVenda) conferirResposta(await window.api.registrarVenda(dados));
-    else {
+    if (window.api?.registrarVenda) {
+      conferirResposta(await window.api.registrarVenda(dados));
+      await recarregarBebidas();
+    } else {
       const total = carrinho.reduce((soma, item) => soma + item.preco * item.quantidade, 0);
-      const numeros = vendasDemo.map((venda) => parseInt(String(venda.pedido).replace(/\D/g, ""), 10) || 0);
+      const numeros = vendas.map((venda) => parseInt(String(venda.pedido).replace(/\D/g, ""), 10) || 0);
       const hora = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-      // linhas guarda os itens da venda para o ranking da tela Relatórios.
-      vendasDemo.unshift({ pedido: `#${Math.max(1048, ...numeros) + 1}`, horario: `Hoje, ${hora}`, itens: `${carrinho.length} ${carrinho.length === 1 ? "item" : "itens"}`, pagamento: dados.formaPagamento, valor: total * (1 - dados.descontoPercentual / 100), status: "Concluída", linhas: dados.itens });
+      vendas.unshift({ pedido: `#${Math.max(1048, ...numeros) + 1}`, horario: `Hoje, ${hora}`, itens: `${carrinho.length} ${carrinho.length === 1 ? "item" : "itens"}`, pagamento: dados.formaPagamento, valor: total * (1 - dados.descontoPercentual / 100), status: "Concluída", linhas: dados.itens });
     }
     carrinho = [];
     document.querySelector("#discount-input").value = "0";
@@ -479,28 +486,23 @@ document.querySelector("#finish-sale").addEventListener("click", async () => {
   }
 });
 
-// Busca dados reais quando a API estiver pronta; até lá, inicia com os exemplos do protótipo.
+// Busca dados reais quando a API estiver pronta; até lá, inicia com listas vazias.
 async function iniciar() {
   const data = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date());
   document.querySelector("#dashboard-date").textContent = data.charAt(0).toLocaleUpperCase("pt-BR") + data.slice(1);
   document.querySelector("#sale-date").textContent = data;
   try {
-    // O colega de IPC/dados pode expor estas chamadas pelo preload.js.
     if (window.api?.listarBebidas) {
       const resposta = conferirResposta(await window.api.listarBebidas());
       if (Array.isArray(resposta)) bebidas = resposta.map((bebida) => ({ ...bebida, categoria: bebida.categoria?.label || rotuloCategoria[bebida.categoria] || bebida.categoria || "Outros" }));
     }
-    if (window.api?.listarVendas) {
-      const resposta = conferirResposta(await window.api.listarVendas());
-      if (Array.isArray(resposta)) vendasDemo = resposta;
-    }
-    const resumo = window.api?.obterResumoDashboard ? conferirResposta(await window.api.obterResumoDashboard()) : null;
-    atualizarDashboard(resumo);
+    // Vendas: adicionado no commit 2 via window.api.listarVendas (IPC + vendas.json).
+    atualizarDashboard();
     desenharCatalogo();
     desenharPedido();
     desenharEstoque();
   } catch (erro) {
-    console.error("Não foi possível carregar os dados do Dashboard:", erro);
+    console.error("Não foi possível carregar os dados:", erro);
     atualizarDashboard();
     desenharCatalogo();
     desenharPedido();

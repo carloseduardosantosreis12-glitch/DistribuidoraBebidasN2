@@ -1,5 +1,5 @@
 // Processo principal: cria a janela, instala o menu nativo e encaminha pedidos IPC.
-const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog, shell } = require('electron');
 const path = require('node:path');
 const repositorio = require('./repositorio');
 
@@ -15,18 +15,23 @@ function criarJanela() {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      sandbox: true,
     }
   });
   janela.loadFile(path.join(__dirname, 'src', 'index.html'));
   janela.on('closed', () => { janela = null; });
+  janela.webContents.on('will-navigate', (event) => { event.preventDefault(); });
+  janela.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 }
 
 function criarMenu() {
   const menu = Menu.buildFromTemplate([
     { label: 'Arquivo', submenu: [
-      { label: 'Novo cadastro de bebida', accelerator: 'CmdOrCtrl+N', click: () => janela?.webContents.send('bebidas:nova') },
-      { type: 'separator' }, { role: 'quit', label: 'Sair' }
+      { label: 'Novo produto', accelerator: 'CmdOrCtrl+N', click: () => janela?.webContents.send('menu:novo-produto') },
+      { label: 'Abrir pasta de dados', click: () => shell.openPath(app.getPath('userData')) },
+      { type: 'separator' },
+      { label: 'Sair', accelerator: 'CmdOrCtrl+Q', click: () => app.quit() }
     ] },
     { label: 'Editar', submenu: [
       { role: 'undo', label: 'Desfazer' },
@@ -41,14 +46,26 @@ function criarMenu() {
     ] },
     { label: 'Exibir', submenu: [
       { role: 'reload', label: 'Recarregar' },
-      { role: 'toggleDevTools', label: 'Ferramentas do desenvolvedor' }
+      { role: 'zoomIn', label: 'Aumentar zoom' },
+      { role: 'zoomOut', label: 'Diminuir zoom' },
+      { role: 'resetZoom', label: 'Restaurar zoom' },
+      { role: 'togglefullscreen', label: 'Tela cheia' },
+      ...(!app.isPackaged ? [{ role: 'toggleDevTools', label: 'Ferramentas do desenvolvedor' }] : [])
     ] },
-    { label: 'Ajuda', submenu: [{ role: 'about', label: 'Sobre' }] }
+    { label: 'Ajuda', submenu: [
+      { label: 'Sobre', click: () => dialog.showMessageBox(janela, {
+        type: 'info', title: 'Sobre',
+        message: 'Distribuidora — Controle de Estoque',
+        detail: 'Versão 1.0.0\nProgramação Desktop N2',
+        buttons: ['OK']
+      }) }
+    ] }
   ]);
   Menu.setApplicationMenu(menu);
 }
 
 // IPC: o processo principal recebe a solicitação e delega a leitura/escrita ao repositório.
+// Canais bebidas:* renomeados para produtos:* no commit 2.
 ipcMain.handle('bebidas:listar', async () => ({ ok: true, dados: await repositorio.listar() }));
 ipcMain.handle('bebidas:salvar', async (_evento, bebida) => ({ ok: true, dados: await repositorio.salvar(bebida) }));
 ipcMain.handle('bebidas:excluir', async (_evento, id) => {
