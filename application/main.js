@@ -65,22 +65,23 @@ function criarMenu() {
 }
 
 // IPC: o processo principal recebe a solicitação e delega a leitura/escrita ao repositório.
-// Canais bebidas:* renomeados para produtos:* no commit 2.
-ipcMain.handle('bebidas:listar', async () => ({ ok: true, dados: await repositorio.listar() }));
-ipcMain.handle('bebidas:salvar', async (_evento, bebida) => ({ ok: true, dados: await repositorio.salvar(bebida) }));
-ipcMain.handle('bebidas:excluir', async (_evento, id) => {
+ipcMain.handle('produtos:carregar', async () => ({ ok: true, dados: await repositorio.listar() }));
+ipcMain.handle('produtos:salvar', async (_evento, bebida) => ({ ok: true, dados: await repositorio.salvar(bebida) }));
+ipcMain.handle('produtos:excluir', async (_evento, id) => {
   const resposta = await dialog.showMessageBox(janela, {
-    type: 'warning', title: 'Excluir bebida',
-    message: 'Deseja realmente excluir esta bebida?', detail: 'Esta ação não pode ser desfeita.',
+    type: 'warning', title: 'Excluir produto',
+    message: 'Deseja realmente excluir este produto?', detail: 'Esta ação não pode ser desfeita.',
     buttons: ['Cancelar', 'Excluir'], defaultId: 0, cancelId: 0, noLink: true
   });
   if (resposta.response !== 1) return { ok: true, dados: false };
   await repositorio.excluir(id);
   return { ok: true, dados: true };
 });
+ipcMain.handle('vendas:listar', async () => ({ ok: true, dados: await repositorio.listarVendas() }));
+ipcMain.handle('vendas:registrar', async (_evento, dadosVenda) => ({ ok: true, dados: await repositorio.registrarVenda(dadosVenda) }));
 
 app.whenReady().then(async () => {
-  await repositorio.inicializar();
+  repositorio.inicializar(app.getPath('userData'));
   criarJanela();
   criarMenu();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) criarJanela(); });

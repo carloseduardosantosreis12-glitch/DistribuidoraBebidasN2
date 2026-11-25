@@ -207,8 +207,8 @@ function abrirFormularioProduto(bebida = null) {
 
 // Atualiza a lista real após inclusão, edição ou exclusão e redesenha as telas dependentes.
 async function recarregarBebidas() {
-  if (window.api?.listarBebidas) {
-    const resposta = conferirResposta(await window.api.listarBebidas());
+  if (window.api?.carregarProdutos) {
+    const resposta = conferirResposta(await window.api.carregarProdutos());
     bebidas = Array.isArray(resposta) ? resposta.map((bebida) => ({ ...bebida, categoria: bebida.categoria?.label || rotuloCategoria[bebida.categoria] || bebida.categoria || "Outros" })) : [];
   }
   desenharEstoque();
@@ -357,8 +357,8 @@ document.querySelector("#product-form").addEventListener("submit", async (evento
   botao.disabled = true;
   mensagem.textContent = "";
   try {
-    if (window.api?.salvarBebida) {
-      conferirResposta(await window.api.salvarBebida(dados));
+    if (window.api?.salvarProduto) {
+      conferirResposta(await window.api.salvarProduto(dados));
     } else {
       const id = dados.id ? Number(dados.id) : Math.max(0, ...bebidas.map((bebida) => Number(bebida.id) || 0)) + 1;
       const bebida = { ...dados, id };
@@ -386,8 +386,8 @@ document.querySelector("#stock-table-body").addEventListener("click", async (eve
   if (!botaoExcluir) return;
   const id = Number(botaoExcluir.dataset.deleteProduct);
   try {
-    if (window.api?.excluirBebida) {
-      const excluiu = conferirResposta(await window.api.excluirBebida(id));
+    if (window.api?.excluirProduto) {
+      const excluiu = conferirResposta(await window.api.excluirProduto(id));
       if (!excluiu) return;
     } else {
       if (!window.confirm("Deseja realmente excluir esta bebida?")) return;
@@ -492,11 +492,14 @@ async function iniciar() {
   document.querySelector("#dashboard-date").textContent = data.charAt(0).toLocaleUpperCase("pt-BR") + data.slice(1);
   document.querySelector("#sale-date").textContent = data;
   try {
-    if (window.api?.listarBebidas) {
-      const resposta = conferirResposta(await window.api.listarBebidas());
+    if (window.api?.carregarProdutos) {
+      const resposta = conferirResposta(await window.api.carregarProdutos());
       if (Array.isArray(resposta)) bebidas = resposta.map((bebida) => ({ ...bebida, categoria: bebida.categoria?.label || rotuloCategoria[bebida.categoria] || bebida.categoria || "Outros" }));
     }
-    // Vendas: adicionado no commit 2 via window.api.listarVendas (IPC + vendas.json).
+    if (window.api?.listarVendas) {
+      const respostaVendas = conferirResposta(await window.api.listarVendas());
+      if (Array.isArray(respostaVendas)) vendas = respostaVendas;
+    }
     atualizarDashboard();
     desenharCatalogo();
     desenharPedido();

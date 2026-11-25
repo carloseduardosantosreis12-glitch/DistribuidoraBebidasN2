@@ -2,10 +2,11 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
-  listarBebidas: () => ipcRenderer.invoke('bebidas:listar'),
-  salvarBebida: (bebida) => ipcRenderer.invoke('bebidas:salvar', bebida),
-  excluirBebida: (id) => ipcRenderer.invoke('bebidas:excluir', id),
-  // Renomeado de aoSolicitarNovoCadastro; canal atualizado para menu:novo-produto.
+  carregarProdutos: () => ipcRenderer.invoke('produtos:carregar'),
+  salvarProduto: (bebida) => ipcRenderer.invoke('produtos:salvar', bebida),
+  excluirProduto: (id) => ipcRenderer.invoke('produtos:excluir', id),
+  listarVendas: () => ipcRenderer.invoke('vendas:listar'),
+  registrarVenda: (dados) => ipcRenderer.invoke('vendas:registrar', dados),
   aoNovoProduto: (callback) => ipcRenderer.on('menu:novo-produto', () => callback()),
   aoSolicitarBusca: (callback) => ipcRenderer.on('menu:buscar', () => callback())
 });
