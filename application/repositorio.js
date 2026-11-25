@@ -98,14 +98,14 @@ async function registrarVenda(dadosVenda) {
     }
     const vendas = dados.vendas || [];
     const numeros = vendas.map((v) => parseInt(String(v.pedido).replace(/\D/g, ''), 10) || 0);
-    const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     const total = dadosVenda.itens.reduce((soma, item) => soma + (Number(item.precoUnitario) || 0) * item.quantidade, 0);
     const desconto = Math.min(100, Math.max(0, Number(dadosVenda.descontoPercentual) || 0));
+    const totalQtd = dadosVenda.itens.reduce((s, i) => s + (Number(i.quantidade) || 0), 0);
     const venda = {
       id: Date.now(),
       pedido: `#${Math.max(1048, ...numeros) + 1}`,
-      horario: `Hoje, ${hora}`,
-      itens: `${dadosVenda.itens.length} ${dadosVenda.itens.length === 1 ? 'item' : 'itens'}`,
+      criadoEm: new Date().toISOString(),
+      itens: `${totalQtd} ${totalQtd === 1 ? 'item' : 'itens'}`,
       pagamento: dadosVenda.formaPagamento || 'Dinheiro',
       valor: total * (1 - desconto / 100),
       status: 'Concluída',

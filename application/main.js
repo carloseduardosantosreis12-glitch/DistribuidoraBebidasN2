@@ -1,7 +1,11 @@
 // Processo principal: cria a janela, instala o menu nativo e encaminha pedidos IPC.
-const { app, BrowserWindow, Menu, ipcMain, dialog, shell } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog, shell, nativeTheme } = require('electron');
 const path = require('node:path');
 const repositorio = require('./repositorio');
+
+// Solicita tema claro ao sistema. No Windows 10 a barra de título Chromium/Electron
+// pode continuar escura independentemente desta configuração; é um limite do SO.
+nativeTheme.themeSource = 'light';
 
 let janela;
 
@@ -12,6 +16,7 @@ function criarJanela() {
     minWidth: 1024,
     minHeight: 700,
     title: 'Distribuidora — Controle de Estoque',
+    backgroundColor: '#F7F7F5',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
