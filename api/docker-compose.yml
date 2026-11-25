@@ -1,0 +1,23 @@
+# PostgreSQL local apenas para desenvolvimento e testes.
+# Não é necessário se você já tiver um PostgreSQL instalado na máquina.
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: bebmais-auth-postgres
+    environment:
+      POSTGRES_USER: bebmais_auth
+      POSTGRES_PASSWORD: bebmais_auth
+      POSTGRES_DB: bebmais_auth
+    ports:
+      - "5432:5432"
+    volumes:
+      - bebmais-auth-pgdata:/var/lib/postgresql/data
+      - ./docker/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bebmais_auth -d bebmais_auth"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  bebmais-auth-pgdata:

@@ -1,5 +1,15 @@
+# Claude Code
+.claude/
+
+# Docs e arquivos internos de desenvolvimento
+api/docs/
+PROMPT-OPENCODE-AUTH-API.md
+
+# Dependências
+node_modules/
+
+# Builds e distribuições
+dist/
 /bin/
 /target/
 /auditoria/
-node_modules/
-dist/
